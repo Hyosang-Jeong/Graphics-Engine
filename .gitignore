@@ -38,3 +38,9 @@ x64/
 *.db-shm
 *.db-wal
 *.opendb
+*.recipe
+*.recipe
+*.recipe
+*.ilk
+GraphicsEngine/x64/Debug/GraphicsEngine.tlog/CL.read.1.tlog
+*.tlog
