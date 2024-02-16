@@ -31,3 +31,10 @@
 *.out
 *.app
 x64/
+*.vsidx
+*.lock
+.vs/GraphicsEngine/v17/.suo
+*.db
+*.db-shm
+*.db-wal
+*.opendb
