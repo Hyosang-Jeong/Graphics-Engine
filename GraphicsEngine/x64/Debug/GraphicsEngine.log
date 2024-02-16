@@ -17,5 +17,6 @@
   ShadowMapScene.cpp
   shader.cpp
   Generating Code...
+  LINK : C:\Users\hyosa\Desktop\Graphics-Engine\x64\Debug\GraphicsEngine.exe not found or not built by the last incremental link; performing full link
 LINK : warning LNK4098: defaultlib 'MSVCRT' conflicts with use of other libs; use /NODEFAULTLIB:library
-  GraphicsEngine.vcxproj -> C:\Users\hyosa\Desktop\GraphicsEngine\x64\Debug\GraphicsEngine.exe
+  GraphicsEngine.vcxproj -> C:\Users\hyosa\Desktop\Graphics-Engine\x64\Debug\GraphicsEngine.exe
