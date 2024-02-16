@@ -1,0 +1,45 @@
+#version 450
+layout(local_size_x = 1, local_size_y = 128, local_size_z = 1) in;
+
+
+#define MAX_BLUR_WIDTH 50
+#define WEIGHTS_SIZE (2 * MAX_BLUR_WIDTH + 1)
+#define SHARED_PIXELS_SIZE (128 + 2 * MAX_BLUR_WIDTH)
+
+
+uniform blurKernel {
+    float weights[WEIGHTS_SIZE];
+};
+uniform int blurWidth;
+uniform int imageHeight;
+layout (rgba32f) uniform readonly image2D src;
+layout (rgba32f) uniform writeonly image2D dst;
+
+shared vec4 sharedPixels[SHARED_PIXELS_SIZE]; 
+
+void main() {
+    ivec2 gpos = ivec2(gl_GlobalInvocationID.xy); 
+    uint lpos = gl_LocalInvocationID.y;
+ 
+    sharedPixels[MAX_BLUR_WIDTH - blurWidth + lpos] = imageLoad(src, clamp(gpos + ivec2(0, -blurWidth),0,imageHeight-1)); 
+
+    
+    if (lpos < 2 * blurWidth) 
+    {
+        sharedPixels[MAX_BLUR_WIDTH - blurWidth +lpos + 128] = imageLoad(src, clamp(gpos + ivec2(0, -blurWidth + 128),0,imageHeight-1));           
+    }
+
+    barrier(); 
+
+    vec4 blurredValue = vec4(0.0);
+    for (int i = -blurWidth; i <= blurWidth; i++) 
+    {
+        int sharedIndex = int(lpos) +  i + MAX_BLUR_WIDTH;
+        if (sharedIndex >= 0 && sharedIndex < SHARED_PIXELS_SIZE) 
+        {
+            blurredValue += sharedPixels[sharedIndex] * weights[i + MAX_BLUR_WIDTH];
+        }
+    }
+
+    imageStore(dst, gpos, blurredValue);
+}

@@ -1,0 +1,21 @@
+﻿  Camera.cpp
+  Engine.cpp
+  FBO.cpp
+  G-buffer.cpp
+  Light.cpp
+  LightUBO.cpp
+  main.cpp
+  ModelManager.cpp
+  SceneManager.cpp
+  ShaderManager.cpp
+  TextureManager.cpp
+  Mesh.cpp
+  Model.cpp
+  RenderableObject.cpp
+  Rendering.cpp
+  DeferredShadingScene.cpp
+  ShadowMapScene.cpp
+  shader.cpp
+  Generating Code...
+LINK : warning LNK4098: defaultlib 'MSVCRT' conflicts with use of other libs; use /NODEFAULTLIB:library
+  GraphicsEngine.vcxproj -> C:\Users\hyosa\Desktop\GraphicsEngine\x64\Debug\GraphicsEngine.exe
