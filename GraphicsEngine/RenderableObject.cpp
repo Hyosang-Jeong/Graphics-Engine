@@ -29,6 +29,11 @@ void RenderableObject::Rendering(Shader* shader)
         shader->setBool("useSpecularTexture", false);
         shader->setVec3("SpecularValue", specular_value);
     }
+
+    shader->setFloat("roughness", roughness);
+    shader->setFloat("metalness", metalness);
+
+
     model->Rendering();
 }
 
@@ -71,6 +76,16 @@ void RenderableObject::SetSpecular(glm::vec3 value)
     specular_value = value;
 }
 
+void RenderableObject::SetRoughness(float rough)
+{
+    roughness = rough;
+}
+
+void RenderableObject::SetMetalness(float metal)
+{
+    metalness = metal;
+}
+
 glm::vec3 RenderableObject::GetPostion()
 {
     return transform.position;
@@ -93,6 +108,14 @@ glm::vec3 RenderableObject::GetDiffuseColor()
 glm::vec3 RenderableObject::GetSpecularColor()
 {
     return specular_value;
+}
+float RenderableObject::GetRoughness()
+{
+    return roughness;
+}
+float RenderableObject::GetMetalness()
+{
+    return metalness;
 }
 Quad::Quad()
 {
@@ -117,7 +140,6 @@ Quad::Quad()
 
     glEnableVertexAttribArray(2);
     glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
-
 
 }
 
@@ -147,17 +169,86 @@ void Quad::Rendering(Shader* shader)
         shader->setBool("useSpecularTexture", false);
         shader->setVec3("SpecularValue", specular_value);
     }
+    shader->setFloat("roughness", roughness);
+    shader->setFloat("metalness", metalness);
     glBindVertexArray(quadVAO);
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4); 
     glBindVertexArray(0);
 }
 
-Sphere::Sphere():RenderableObject()
+Sphere::Sphere()
 {
-    model = Engine::GetModelManager().Load("../obj/sphere.obj");
-    center = glm::vec3(0, 0, 0);
-    transform.scale = glm::vec3(1);
+    int stacks = 100;
+    int sectors = 100;
+    float radius = 1;
+    std::vector<float> vertices;
+    std::vector<unsigned int> indices;
+    float M_PI = glm::pi<float>();
+    float M_PI_2 = M_PI / 2.f;
+    float const R = 1.0f / (float)(stacks - 1);
+    float const S = 1.0f / (float)(sectors - 1);
+
+    for ( int r = 0; r < stacks; ++r) {
+        for ( int s = 0; s < sectors; ++s) {
+            float const y = sin(-M_PI_2 + M_PI * r * R);
+            float const x = cos(2 * M_PI * s * S) * sin(M_PI * r * R);
+            float const z = sin(2 * M_PI * s * S) * sin(M_PI * r * R);
+
+            vertices.push_back(x * radius);
+            vertices.push_back(y * radius);
+            vertices.push_back(z * radius);
+
+            vertices.push_back(x); // Normal
+            vertices.push_back(y);
+            vertices.push_back(z);
+
+            vertices.push_back(s * S); // Texture coordinates
+            vertices.push_back(r * R);
+        }
+    }
+
+    indices.reserve(stacks * sectors * 4);
+    for ( int r = 0; r < stacks - 1; ++r) {
+        for ( int s = 0; s < sectors - 1; ++s) {
+            indices.push_back(r * sectors + s);
+            indices.push_back((r + 1) * sectors + s);
+            indices.push_back(r * sectors + (s + 1));
+
+            indices.push_back(r * sectors + (s + 1));
+            indices.push_back((r + 1) * sectors + s);
+            indices.push_back((r + 1) * sectors + (s + 1));
+        }
+    }
+
+    glGenVertexArrays(1, &VAO);
+    glGenBuffers(1, &VBO);
+    glGenBuffers(1, &EBO);
+
+    glBindVertexArray(VAO);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), &vertices[0], GL_STATIC_DRAW);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), &indices[0], GL_STATIC_DRAW);
+
+    // vertex positions
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+
+    // vertex normals
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+
+    // vertex texture coords
+    glEnableVertexAttribArray(2);
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
+
+    count = static_cast<int>(indices.size());
 }
+
 
 Sphere::Sphere(glm::vec3 center_, float radius):Sphere()
 {
@@ -191,7 +282,11 @@ void Sphere::Rendering(Shader* shader)
         shader->setBool("useSpecularTexture", false);
         shader->setVec3("SpecularValue", specular_value);
     }
-    model->Rendering();
+    shader->setFloat("roughness", roughness);
+    shader->setFloat("metalness", metalness);
+    glBindVertexArray(VAO);
+    glDrawElements(GL_TRIANGLES, count, GL_UNSIGNED_INT, 0);
+    glBindVertexArray(0);
 }
 
 float Sphere::GetRadius()

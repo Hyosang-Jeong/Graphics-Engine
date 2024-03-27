@@ -15,11 +15,15 @@ public:
     void SetDiffuse(glm::vec3 value);
     void SetSpecular(std::string texture_path);
     void SetSpecular(glm::vec3 value);
+    void SetRoughness(float rough);
+    void SetMetalness(float metal);
     glm::vec3 GetPostion();
     glm::vec3 GetRotation();
     glm::vec3 GetScale();
     glm::vec3 GetDiffuseColor();
     glm::vec3 GetSpecularColor();
+   float GetRoughness();
+   float GetMetalness();
 protected:
 	Transform transform;
     bool useDiffuseTexture{ false };
@@ -29,6 +33,9 @@ protected:
     bool useSpecularTexture{ false };
     std::string specular_texture;
     glm::vec3 specular_value{ 0.5 };
+
+    float roughness{ 100 };
+    float metalness{ 0.4 };
 
 private:
 	Model* model{ nullptr };
@@ -56,5 +63,5 @@ public:
      float GetRadius();
     glm::vec3 center;
 private:
-    Model* model{ nullptr };
+    unsigned int VAO, VBO,EBO,count;
 };

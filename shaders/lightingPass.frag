@@ -6,28 +6,30 @@ uniform sampler2D gNormal;
 uniform sampler2D gDiffuse;
 uniform sampler2D gSpecular;
 uniform sampler2D gShadowMap;
-
+uniform sampler2D sky;
+uniform sampler2D sky_irr;
 
 uniform vec3 eyePosition;   
 uniform vec3 lightPosition; 
-
+uniform vec3 lightColor;
 uniform mat4 lightSpaceMatrix;
 uniform float near;
 uniform float far;
+
+uniform float N;
+uniform float exposure;
+
+
+uniform HammersleyBlock {
+ float hammersley[2*100]; 
+}block;
+
+
+
 out vec4 FragColor;
 
-
-
-/*float ShadowCalculation(vec4 shadowCoord) 
-{
-    vec2 shadowIndex = shadowCoord.xy / shadowCoord.w;
-    shadowIndex = shadowIndex * 0.5 + 0.5;
-    float light_depth = texture(gShadowMap, shadowIndex).x; 
-    float pixel_depth = (shadowCoord.w-near)/(far-near);
-    float shadow = pixel_depth -0.05 > light_depth  ? 1.0 : 0.0;
-    return shadow;
-}*/
-
+float PI = 3.14159;
+const vec2 invAtan = vec2(0.1591, 0.3183);
 vec3 Cholesky_Decomposition(float m11, float m12, float m13, float m22, float m23, float m33, float z1, float z2, float z3)
 {
     float a = sqrt(m11);
@@ -86,28 +88,131 @@ float MSM_Shadow(vec4 shadowCoord)
 
 
 
+float D(vec3 H, vec3 N, float roughness)
+{
+   float a = (roughness + 2.0)/(2.0*PI);
+   a*=pow(dot(N,H),roughness);
+   return a;
+}
+
+vec3 F(vec3 L, vec3 H, vec3 Ks)
+{
+    float cosTheta = max(dot(L,H),0.0);
+    return Ks + (1.0 - Ks) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
+}
+
+float G1(vec3 V, vec3 H, vec3 N, float a)
+{
+    float vN = max(dot(V,N),0.0);
+    if(vN > 1.0)
+        return 1.0;
+    float tan_theta = sqrt(1.0 - vN*vN)/vN;
+
+    if(tan_theta == 0)
+        return 1.0;
+
+    float alpha = sqrt(a*0.5 + 1)/tan_theta;
+
+    if(alpha < 1.6)
+    {
+        return (3.535*a + 2.181*a*a)/(1.0+2.276*a+2.577*a*a);
+    }
+
+    return 1;
+}
+
+float G(vec3 L, vec3 V, vec3 H, vec3 N, float roughness)
+{
+    return G1(L,H,N, roughness)*G1(V,H,N, roughness);
+}
+
+vec2 SampleSphericalMap(vec3 v)
+{
+    vec2 uv = vec2(atan(v.z, v.x), asin(v.y));
+    uv *= invAtan;
+    uv += 0.5;
+    return uv;
+}
+
+
+
 void main()
 {
     vec2 screenCoords = gl_FragCoord.xy / vec2(textureSize(gPosition, 0));
 
+
     vec3 worldPosition  = texture(gPosition, screenCoords).xyz;
     vec3 normal         = texture(gNormal, screenCoords).xyz;
-    vec3 diffuseColor   = texture(gDiffuse, screenCoords).xyz;
-    vec3 SpecularColor  = texture(gSpecular, screenCoords).xyz;
+    vec4 diffuseColor   = texture(gDiffuse, screenCoords).xyzw;
+    vec4 SpecularColor  = texture(gSpecular, screenCoords).xyzw;
     vec3 ShadowMap      = texture(gShadowMap, screenCoords).xyz;
-
+    float roughness     = diffuseColor.w;
+    float metalness     = SpecularColor.w;
     vec3 lightVector    = normalize(lightPosition - worldPosition);
     vec3 viewVector     = normalize(eyePosition - worldPosition);
-    vec3 reflectDir     = reflect(-lightVector, normal);
-
-    float diffuseIntensity = max(dot(normal, lightVector), 0.0);
-    vec3 diffuse =  diffuseColor * diffuseIntensity;
-
-    float specularStrength = 0.5;
-    float spec = pow(max(dot(viewVector, reflectDir), 0.0), 32.0);
-    vec3 specular = specularStrength * spec * SpecularColor;
 
     vec4 shadowCoord = lightSpaceMatrix * vec4(worldPosition,1.0);
     float shadow = MSM_Shadow(shadowCoord);
-    FragColor = (1.0 - shadow) *vec4(diffuse + specular, 1.0);
+
+    SpecularColor.xyz = mix(SpecularColor.xyz,diffuseColor.xyz,metalness);
+
+    vec3 spec = vec3(0);
+
+
+    vec3 R = normalize(2*dot(viewVector,normal)*normal - viewVector);
+    vec3 H = normalize(lightVector+viewVector);
+    vec3 A = normalize(cross(vec3(0,0,1), R));
+    vec3 B = normalize(cross(R,A));
+
+    float cosTheta = max(dot(normal,lightVector),0);
+
+
+    for(int i = 0; i < N*2; i+=2)
+    {
+        float ran1 = block.hammersley[i];
+        float ran2 = block.hammersley[i+1];
+
+        float theta = acos(pow(ran2,1.0/(roughness+1.0)));
+
+        float u = ran1;
+        float v = theta/PI;
+
+
+        vec3 L = vec3(cos(2*PI*(0.5-u))*sin(PI*v), sin(2*PI*(0.5-u))*sin(PI*v),cos(PI*v));
+
+        vec3 w = normalize(L.x*A + L.y*B + L.z*R);
+
+        //vec2 uv = vec2(0.5-atan(-w.z, -w.x)/(2*PI), acos(-w.y)/PI);
+
+        vec2 uv = SampleSphericalMap(w);
+        vec3 h = normalize(w+viewVector);
+
+        float level = 0.5*log2(100*100/N) - 0.5*log2(D(h,normal,roughness));
+
+        vec3 color = textureLod(sky,uv,level).xyz;
+
+        
+        spec += 
+        dot(w,normal) * color* G(w,viewVector,h,normal,roughness)*F(w,h,SpecularColor.xyz)/
+        (4.0*max(dot(w, normal),0.1)*dot(viewVector,normal)+ 0.0001);
+    }
+    spec /= N;
+    vec2 uv = SampleSphericalMap(normal);
+    vec3 Diffuse = (diffuseColor.xyz/PI) * texture2D(sky_irr,uv).xyz ;
+
+    vec3 IBL = Diffuse + spec;
+
+    vec3 BRDF = lightColor*cosTheta*diffuseColor.xyz*(1-shadow)/PI  + 
+    (D(H,normal,roughness)*G(lightVector,viewVector,H,normal,roughness)*F(lightVector,H,SpecularColor.xyz))
+    /(4.0*dot(lightVector,normal)*dot(viewVector,normal) +0.0001);
+    
+    BRDF = clamp(lightColor*cosTheta*BRDF,0.0,1.0);
+
+
+
+    vec3 color = BRDF + IBL;
+    color = (exposure*color) / (exposure*color + vec3(1.0));
+    color = pow(color, vec3(1.0/2.2)); 
+
+    FragColor = vec4(color,1.0);
 }
