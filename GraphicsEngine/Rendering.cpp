@@ -8,6 +8,7 @@
 
 void ForwardRendering::Render(std::vector<RenderableObject*> renderable, Shader* shader)
 {
+
 	for (auto& obj : renderable)
 	{
 		obj->Rendering(shader);

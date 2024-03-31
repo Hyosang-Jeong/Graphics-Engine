@@ -17,14 +17,6 @@ ShadowMapScene::ShadowMapScene():shadowMapping(1280,1280)
 
 	lightPos = glm::vec3(0, 10, 10);
 	lightView = glm::lookAt(lightPos, glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
-	lightColor = glm::vec3(1, 1, 1);
-
-	block = BuildHammersleyPoints(block_N);
-
-	glGenBuffers(1, &id);
-	bindpoint = 1; // Increment this for other blocks.
-	glBindBufferBase(GL_UNIFORM_BUFFER, bindpoint, id);
-	glBufferData(GL_UNIFORM_BUFFER, sizeof(block), &block, GL_STATIC_DRAW);
 }
 
 ShadowMapScene::~ShadowMapScene()
@@ -67,149 +59,99 @@ void ShadowMapScene::OnImGuiRender()
 	ImGui_ImplGlfw_NewFrame();
 	ImGui::NewFrame();
 	
-	if(ImGui::BeginMenu("Object Control") )
+	ImGui::Begin("Setting");
+
+	static const char* model[] = { "Plane", "bunny_1", "bunny_2",  "bunny_3" };
+	static const char* current_item = model[0];
+	static int current = 0;
+	if (ImGui::BeginCombo("Model", current_item)) // The second parameter is the label previewed before opening the combo.
 	{
-		static const char* model[] = { "Plane", "obj_1",  "obj_2" };
-		static const char* current_item = model[0];
-		static int current = 0;
-		if (ImGui::BeginCombo("Model", current_item)) // The second parameter is the label previewed before opening the combo.
+		for (int n = 0; n < 4; n++)
 		{
-			for (int n = 0; n < 3; n++)
+			bool is_selected = (current_item == model[n]);
+			if (ImGui::Selectable(model[n], is_selected))
 			{
-				bool is_selected = (current_item == model[n]);
-				if (ImGui::Selectable(model[n], is_selected))
-				{
-					current_item = model[n];
-					current = n;
-				}
-				if (is_selected)
-				{
-					ImGui::SetItemDefaultFocus();
-				}
+				current_item = model[n];
+				current = n;
 			}
-			ImGui::EndCombo();
-		}
-
-		glm::vec3 color = objects[current]->GetDiffuseColor();
-		if (ImGui::ColorEdit3("Diffuse Color", &color.x))
-		{
-			objects[current]->SetDiffuse(color);
-		}
-		color = objects[current]->GetSpecularColor();
-		if (ImGui::ColorEdit3("Specular Color", &color.x))
-		{
-			objects[current]->SetSpecular(color);
-		}
-		float roughness{ objects[current]->GetRoughness() / 100.f };
-		float metalness{ objects[current]->GetMetalness() };
-		if (ImGui::SliderFloat("roughness", &roughness, 1.f, 100.f))
-		{
-			objects[current]->SetRoughness(roughness * 100.f);
-		}
-		if (ImGui::SliderFloat("metalness", &metalness, 0.1f, 1.f))
-		{
-			objects[current]->SetMetalness(metalness);
-		}
-
-		if (ImGui::SliderInt("hammersley Block num", &block_N, 1, 40))
-		{
-			int kk;
-			int pos = 0;
-
-			for (int k = 0; k < block_N; k++)
+			if (is_selected)
 			{
-				kk = k;
-				float u = 0.0f;
-				for (float p = 0.5f; kk; p *= 0.5f, kk >>= 1)
-				{
-					if (kk & 1)
-						u += p;
-				}
-				float v = (k + 0.5) / (float)block_N;
-				block.hammersley[pos++] = u;
-				block.hammersley[pos++] = v;
+				ImGui::SetItemDefaultFocus();
 			}
-
-			bindpoint = 1; // Increment this for other blocks.
-			glBindBufferBase(GL_UNIFORM_BUFFER, bindpoint, id);
-			glBufferData(GL_UNIFORM_BUFFER, sizeof(block), &block, GL_STATIC_DRAW);
 		}
-		ImGui::EndMenu();
+		ImGui::EndCombo();
 	}
 
-	if (ImGui::BeginMenu("Light Control"))
+	glm::vec3 color = objects[current]->GetDiffuseColor();
+	if (ImGui::ColorEdit3("Diffuse Color", &color.x))
 	{
-		ImGui::SliderFloat3("LightPosition", &lightPos[0], -10, 10);
-		ImGui::ColorEdit3("Light Color", &lightColor[0]);
-		ImGui::EndMenu();
+		objects[current]->SetDiffuse(color);
 	}
-
-	if (ImGui::BeginMenu("Drawing Control"))
+	color = objects[current]->GetSpecularColor();
+	if (ImGui::ColorEdit3("Specular Color", &color.x))
 	{
-		const char* items[] = { "ALL", "Position", "Normal", "Diffuse", "Specular", "ShadowMap" };
-		static int item_current = 0;
-		if (ImGui::ListBox("Drawing Option", &item_current, items, IM_ARRAYSIZE(items), 6))
-		{
-			drawingIndex = item_current;
-		}
-
-		ImGui::SliderFloat("Exposure", &exposure, 0.1f, 5.f);
-		ImGui::EndMenu();
+		objects[current]->SetSpecular(color);
 	}
 
-	if (ImGui::BeginMenu("Shadow Control"))
+	ImGui::SliderFloat3("LightPosition", &lightPos[0], -10, 10);
+
+	ImGui::NewLine();
+	const char* items[] = { "ALL", "Position", "Normal", "Diffuse", "Specular", "ShadowMap" };
+	static int item_current = 0;
+	if (ImGui::ListBox("Drawing Option", &item_current, items, IM_ARRAYSIZE(items), 6))
 	{
-		ImGui::Checkbox("Use Blured ShadowMap", &useBlurTexture);
-
-		if (ImGui::SliderInt("BlurWidth", &blurwidth, 1, 50))
-		{
-			shadowMapping.createGaussianKernel(blurwidth);
-		}
-		ImGui::NewLine();
-		static bool light_view = false;
-		if (ImGui::Checkbox("Scene from Light View",&light_view))
-		{
-			FromLightView = !FromLightView;
-		}
-
-		ImGui::EndMenu();
+		drawingIndex = item_current;
 	}
-	
 
+	ImGui::NewLine();
+	ImGui::Checkbox("Use Blured ShadowMap", &useBlurTexture);
+
+	if (ImGui::SliderInt("BlurWidth", &blurwidth, 1, 50))
+	{
+		shadowMapping.createGaussianKernel(blurwidth);
+	}
+	ImGui::NewLine();
+	if (ImGui::Button("Scene from Light View"))
+	{
+		FromLightView = !FromLightView;
+	}
+
+	if (ImGui::Button("Reload"))
+	{
+		blurXShader->reload();
+		blurYShader->reload();
+	}
 }
 
 
 void ShadowMapScene::SetupObjects()
 {
 	objects.push_back(new Quad());
-	objects.push_back(new RenderableObject(Engine::GetModelManager().Load("../obj/teapot.obj")));
-	objects.push_back(new RenderableObject(Engine::GetModelManager().Load("../obj/teapot.obj")));
+	objects.push_back(new RenderableObject(Engine::GetModelManager().Load("../obj/bunny_high_poly.obj")));
+	objects.push_back(new RenderableObject(Engine::GetModelManager().Load("../obj/bunny_high_poly.obj")));
+	objects.push_back(new RenderableObject(Engine::GetModelManager().Load("../obj/bunny_high_poly.obj")));
 
 	objects[1]->SetSpecular(glm::vec3(1, 1, 1));
-	objects[2]->SetSpecular(glm::vec3(1, 1, 1));
+	objects[2]->SetSpecular(glm::vec3(0.5, 0.5, 0.5));
+	objects[3]->SetSpecular(glm::vec3(0, 0, 0));
+
 
 	objects[1]->SetDiffuse(glm::vec3(0, 0, 0));
 	objects[2]->SetDiffuse(glm::vec3(1, 1, 1));
+	objects[3]->SetDiffuse(glm::vec3(0.8, 0.3, 0.1));
 
-	objects[1]->SetPosItion(glm::vec3(5, 0, 0));
+	objects[1]->SetPosItion(glm::vec3(2.5, 0, 2.5));
 	objects[2]->SetPosItion(glm::vec3(0, 0, 0));
-
-	objects[1]->SetScale(glm::vec3(2.5, 2.5, 1.5));
-	objects[2]->SetScale(glm::vec3(2.5, 2.5, 1.5));
-
-	objects[1]->SetRoughness(10000.f);
-
-	background = new Sphere();
-	background->SetDiffuse("Newport_Loft_Ref.hdr");
-	std::vector<glm::vec3> irr = calculate_Irr_coefficients(Engine::GetTextureManager().Load("Newport_Loft_Ref.hdr"));
-	writeIrr_image("../textures/irradiance_map.irr.hdr", irr);
-	background->SetScale({ 100,100,100 });
-
-
+	objects[3]->SetPosItion(glm::vec3(-2.5, 0, -2.5));
 
 	objects[0]->SetRotation({ -90,0,0 });
-	objects[0]->SetPosItion({ 0,-4,0 });
+	objects[0]->SetPosItion({ 0,-2,0 });
 	objects[0]->SetScale({ 10,10,1 });
+
+	background = new Sphere();
+	background->SetDiffuse("Tropical_Beach_8k.jpg");
+	background->SetScale({ 100,100,100 });
+	background->SetRotation({ 0,180,0 });
 }
 
 void ShadowMapScene::SetupShader()
@@ -223,6 +165,9 @@ void ShadowMapScene::SetupShader()
 	fsqDebugShader = Engine::GetShaderManager().Load("FSQ_Debug.vert", "FSQ_Debug.frag");
 
 }
+
+
+
 
 void ShadowMapScene::ForwardPass()
 {
@@ -265,7 +210,6 @@ void ShadowMapScene::ForwardPass()
 		backgroundShader->active();
 		backgroundShader->setMat4("projection", projection);
 		backgroundShader->setMat4("view", glm::mat4(camera->GetView()));
-		backgroundShader->setFloat("exposure", exposure);
 		fowardRendering.Render({ background }, backgroundShader);
 		glCullFace(GL_BACK);
 	}
@@ -290,34 +234,15 @@ void ShadowMapScene::DeferredPass()
 
 	secondPassShader->active();
 	secondPassShader->setVec3("eyePosition", camera->GetPosition());
-	secondPassShader->setVec3("lightPosition", lightPos);
-	secondPassShader->setVec3("lightColor", lightColor);
+	secondPassShader->setVec3("lightPosition", glm::vec3(0, 100, 100));
 	secondPassShader->setMat4("lightSpaceMatrix", projection * lightView);
 	secondPassShader->setFloat("near", light_near);
 	secondPassShader->setFloat("far", light_far);
-	secondPassShader->setFloat("N", block_N);
-	secondPassShader->setFloat("exposure", exposure);
-
-
-	int loc = glGetUniformBlockIndex(secondPassShader->ID, "HammersleyBlock");
-	glUniformBlockBinding(secondPassShader->ID, loc, bindpoint);
-
 
 	if(useBlurTexture)
 		deferredRendering.useShadow(shadowMapping.GetBluredShadowMap());
 	else
 		deferredRendering.useShadow(shadowMapping.GetShadowMap());
-
-	glUniform1i(glGetUniformLocation(secondPassShader->ID, "sky"), 5);
-	glActiveTexture(GL_TEXTURE5);
-	glBindTexture(GL_TEXTURE_2D, Engine::GetTextureManager().Load("Newport_Loft_Ref.hdr").id);	
-	
-	glUniform1i(glGetUniformLocation(secondPassShader->ID, "sky_irr"), 6);
-	glActiveTexture(GL_TEXTURE6);
-	glBindTexture(GL_TEXTURE_2D, Engine::GetTextureManager().Load("irradiance_map.irr.hdr").id);
-
-
-
 	deferredRendering.Render(objects, firstPassShader, secondPassShader);
 }
 

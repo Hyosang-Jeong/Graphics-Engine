@@ -43,6 +43,7 @@ Mesh Model::processMesh(aiMesh* mesh, const aiScene* scene)
     // data to fill
     vector<Vertex> vertices;
     vector<unsigned int> indices;
+    vector<Texture> textures;
 
     // walk through each of the mesh's vertices
     for (unsigned int i = 0; i < mesh->mNumVertices; i++)
@@ -124,13 +125,12 @@ Mesh Model::processMesh(aiMesh* mesh, const aiScene* scene)
     // process materials
     aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex]; 
     Calculate_uv_spherical(vertices);
-    return Mesh(vertices, indices);
+    return Mesh(vertices, indices, textures);
 }
 
 
 void Model::Calculate_uv_spherical(vector<Vertex>& vertices)
 {
-
     for (auto& vertex : vertices)
     {
         glm::vec3 v = vertex.Position;
@@ -146,7 +146,6 @@ void Model::Calculate_uv_spherical(vector<Vertex>& vertices)
         vertex.TexCoords.x = normalizedAzimuth;
         vertex.TexCoords.y = polar;
     }
-
 }
 
 

@@ -35,4 +35,5 @@ public:
 
     glm::mat4 GetModelMatrix() const;
 };
+
 #endif
