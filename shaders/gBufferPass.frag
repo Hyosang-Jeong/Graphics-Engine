@@ -17,6 +17,8 @@ uniform vec3 diffuseValue;
 uniform bool useSpecularTexture;
 uniform sampler2D SpecularTexture;
 uniform vec3 SpecularValue;
+uniform float roughness;
+uniform float metalness;
 
 void main(void)
 {
@@ -26,11 +28,11 @@ void main(void)
     if(useDiffuseTexture)
         gDiffuse = texture(diffuseTexture, TexCoords).rgba;
     else
-        gDiffuse = vec4(diffuseValue,1.0);
+        gDiffuse = vec4(diffuseValue,roughness);
 
     if(useSpecularTexture)
         gSpecular = texture(SpecularTexture, TexCoords).rgba;
     else
-        gSpecular = vec4(SpecularValue,1.0);
+        gSpecular = vec4(SpecularValue,metalness);
 
 }

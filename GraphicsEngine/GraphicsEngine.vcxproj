@@ -30,6 +30,7 @@
     <ClCompile Include="Manager\SceneManager.cpp" />
     <ClCompile Include="Manager\ShaderManager.cpp" />
     <ClCompile Include="Manager\TextureManager.cpp" />
+    <ClCompile Include="Equation.cpp" />
     <ClCompile Include="Mesh.cpp" />
     <ClCompile Include="Model.cpp" />
     <ClCompile Include="RenderableObject.cpp" />
@@ -50,6 +51,7 @@
     <ClInclude Include="Manager\ShaderManager.h" />
     <ClInclude Include="Manager\TextureManager.h" />
     <ClInclude Include="Material.h" />
+    <ClInclude Include="Equation.h" />
     <ClInclude Include="Mesh.h" />
     <ClInclude Include="Model.h" />
     <ClInclude Include="RenderableObject.h" />

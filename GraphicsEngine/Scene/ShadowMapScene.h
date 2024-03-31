@@ -2,6 +2,7 @@
 #include"Scene.h"
 #include "Rendering.h"
 #include"FBO.h"
+#include"Equation.h"
 class Camera;
 class RenderableObject;
 class Shader;
@@ -26,10 +27,10 @@ public:
 private:
 	Camera* camera;
 	std::vector<RenderableObject*> objects;
-	RenderableObject* background;
 	DeferredRendering deferredRendering;
 	ForwardRendering fowardRendering;
 	ShadowMapping shadowMapping;
+	RenderableObject* background;
 
 
 	Shader* shadowShader;
@@ -44,6 +45,7 @@ private:
 
 	glm::vec3 lightPos;
 	glm::mat4 lightView;
+	glm::vec3 lightColor;
 
 	unsigned image_w = 1280;
 	unsigned image_h = 1280;
@@ -51,9 +53,19 @@ private:
 
 
 	float light_near{ 0.1f };
-	float light_far{ 23.f };
+	float light_far{ 23.f }; 
+
+	float exposure = 2.5f;
+
+
+
 	int drawingIndex{ 0 };
-	bool useBlurTexture{ false };
+	bool useBlurTexture{ true };
 	bool FromLightView{ false };
+
+	int block_N{ 40 };
+
+	BLOCK block;
+	unsigned int id, bindpoint;
 };
 
